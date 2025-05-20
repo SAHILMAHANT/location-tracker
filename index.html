@@ -3,114 +3,210 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Location Tracker</title>
+  <title>Location Tracker Link Generator</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 2rem;
-      text-align: center;
+    :root {
+      --primary-color: #4a90e2;
+      --secondary-color: #50e3c2;
+      --background-color: #f4f7fa;
+      --text-color: #333;
+      --btn-bg: var(--primary-color);
+      --btn-hover-bg: #357ab7;
+      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    input {
-      width: 100%;
-      max-width: 400px;
-      padding: 0.5rem;
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--background-color);
+      font-family: var(--font-family);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 {
+      color: var(--primary-color);
+    }
+    p {
+      max-width: 450px;
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
     }
     button {
-      padding: 0.5rem 1rem;
+      background-color: var(--btn-bg);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      padding: 0.8rem 1.6rem;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: var(--btn-hover-bg);
+    }
+    input.share-link {
+      width: 100%;
+      max-width: 450px;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border: 2px solid var(--primary-color);
+      border-radius: 6px;
+      margin-top: 1rem;
+      background-color: #fff;
+    }
+    .location-box {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .location-info {
+      font-size: 1rem;
+      margin: 0.2rem 0;
+    }
+    .error-msg {
+      color: #e74c3c;
+      font-weight: 600;
       margin-top: 1rem;
     }
-    .info {
-      margin-top: 2rem;
+    footer {
+      margin-top: auto;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    a.link-instruction {
+      color: var(--primary-color);
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
   <h1>Location Tracker Link Generator</h1>
-  <p>Click the button to generate a tracking link.</p>
+  <p>
+    Generate a link to share. The visitor must allow location access to see and share their location.
+  </p>
+
   <div id="app"></div>
 
+  <footer>
+    &copy; 2025 Location Tracker. Built with respect for privacy.
+  </footer>
+
   <script>
+    // Generate 8-character hex ID
     function generateId() {
-      return Math.random().toString(16).slice(2, 10);
+      return [...crypto.getRandomValues(new Uint8Array(4))]
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function getIdFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
     }
 
     function buildShareLink(id) {
-      return window.location.origin + window.location.pathname + '?id=' + encodeURIComponent(id);
+      return `${window.location.origin}${window.location.pathname}?id=${id}`;
     }
 
     function renderMainPage() {
       const app = document.getElementById('app');
       app.innerHTML = '';
+
       const btn = document.createElement('button');
       btn.textContent = 'Generate Link';
       btn.onclick = () => {
         const id = generateId();
         const link = buildShareLink(id);
-        renderLink(link);
+        renderLinkGenerated(link);
       };
+
       app.appendChild(btn);
     }
 
-    function renderLink(link) {
+    function renderLinkGenerated(link) {
       const app = document.getElementById('app');
-      app.innerHTML = \`
-        <p>Copy and share this link:</p>
-        <input readonly id="linkBox" value="\${link}" />
-        <br/>
-        <button onclick="copyLink()">Copy Link</button>
-        <p><a href="\${link}" target="_blank">Open Link</a></p>
-      \`;
-    }
+      app.innerHTML = '';
 
-    function copyLink() {
-      const input = document.getElementById('linkBox');
-      input.select();
-      document.execCommand('copy');
-      alert('Link copied to clipboard!');
+      const info = document.createElement('p');
+      info.textContent = 'Copy and share this link:';
+      app.appendChild(info);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'share-link';
+      input.value = link;
+      input.readOnly = true;
+      app.appendChild(input);
+
+      const copyButton = document.createElement('button');
+      copyButton.textContent = 'Copy Link';
+      copyButton.style.marginTop = '1rem';
+      copyButton.onclick = () => {
+        input.select();
+        document.execCommand('copy');
+        copyButton.textContent = 'Copied!';
+        setTimeout(() => copyButton.textContent = 'Copy Link', 1500);
+      };
+      app.appendChild(copyButton);
     }
 
     function renderLocationPage(id) {
       const app = document.getElementById('app');
-      app.innerHTML = '<p>Trying to get your location...</p>';
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude.toFixed(6);
-            const lon = position.coords.longitude.toFixed(6);
-            const acc = position.coords.accuracy.toFixed(2);
-            const info = document.createElement('div');
-            info.className = 'info';
-            info.innerHTML = \`
-              <p><strong>Latitude:</strong> \${lat}</p>
-              <p><strong>Longitude:</strong> \${lon}</p>
-              <p><strong>Accuracy:</strong> \${acc} meters</p>
-              <p><a href="https://maps.google.com/?q=\${lat},\${lon}" target="_blank">View on Google Maps</a></p>
-            \`;
-            app.innerHTML = '';
-            app.appendChild(info);
+      app.innerHTML = '';
 
-            // Send location to backend
-            fetch('/api/submit-location', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: id, latitude: lat, longitude: lon, accuracy: acc })
-            }).then(res => res.json()).then(data => {
-              console.log('Location sent:', data);
-            }).catch(err => {
-              console.error('Error sending location:', err);
-            });
-          },
-          (error) => {
-            app.innerHTML = '<p>Location access denied or unavailable.</p>';
-          }
-        );
-      } else {
-        app.innerHTML = '<p>Geolocation not supported.</p>';
+      const info = document.createElement('p');
+      info.textContent = 'This page tries to get your location. Please allow permission if prompted.';
+      app.appendChild(info);
+
+      const locationBox = document.createElement('div');
+      locationBox.className = 'location-box';
+      locationBox.innerHTML = '<p class="location-info">Getting location...</p>';
+      app.appendChild(locationBox);
+
+      if (!navigator.geolocation) {
+        locationBox.innerHTML = '<p class="error-msg">Geolocation is not supported.</p>';
+        return;
       }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lon = pos.coords.longitude.toFixed(6);
+          const accuracy = pos.coords.accuracy.toFixed(0);
+
+          locationBox.innerHTML = `
+            <p class="location-info"><strong>Latitude:</strong> ${lat}</p>
+            <p class="location-info"><strong>Longitude:</strong> ${lon}</p>
+            <p class="location-info"><strong>Accuracy:</strong> ±${accuracy} meters</p>
+            <p><a href="https://maps.google.com/?q=${lat},${lon}" target="_blank" class="link-instruction">View on Google Maps</a></p>
+            <p><em>This information is not stored or transmitted anywhere.</em></p>
+          `;
+        },
+        (error) => {
+          const errors = {
+            1: 'Permission denied.',
+            2: 'Position unavailable.',
+            3: 'Timeout getting location.'
+          };
+          locationBox.innerHTML = `<p class="error-msg">${errors[error.code] || 'Unknown error.'}</p>`;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    // Run app
+    const id = getIdFromURL();
     if (id) {
       renderLocationPage(id);
     } else {
